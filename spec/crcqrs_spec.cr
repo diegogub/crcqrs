@@ -1,9 +1,11 @@
 require "./spec_helper"
 
-describe Crcqrs do
-  # TODO: Write tests
-
-  it "works" do
-    false.should eq(true)
+class CreateAcc < Crcqrs::Cmd
+  def name
+    "CreateAcc"
   end
+end
+
+describe Crcqrs do
+  puts CreateAcc.new("{}").to_json
 end
