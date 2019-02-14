@@ -8,7 +8,7 @@ Simple library for CQRS and crystal.
 ```yaml
 dependencies:
   crcqrs:
-    github: your-github-user/crcqrs
+    github: diegogub/crcqrs
 ```
 2. Run `shards install`
 
