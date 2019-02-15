@@ -2,24 +2,22 @@ require "json"
 require "time"
 
 module Crcqrs
-
   # Handle all commmands, has access to event store, indexes and external services
   class CmdHandler
     # list of aggregates
-    @aggregates : Hash(String,Crcqrs::Aggregate)
+    @aggregates : Hash(String, Crcqrs::Aggregate)
     # maps one command to one aggregate
-    @commands : Hash(String,String)
+    @commands : Hash(String, String)
 
     def initialize(aggregates : Array(Crcqrs::Aggregate))
-        # init maps
-        @aggregates = Hash(String,Aggregate).new()
-        @commands = Hash(String,String).new()
+      # init maps
+      @aggregates = Hash(String, Aggregate).new
+      @commands = Hash(String, String).new
 
-        aggregates.each do |a|
-        end
+      aggregates.each do |a|
+      end
     end
   end
-
 
   # Cmd represent a event of will from the user to change state
   # The Cmd acts over one specific aggregate root
@@ -34,8 +32,8 @@ module Crcqrs
       @data = JSON.parse(data)
     end
 
-    def to_json() : JSON::Any
-        @data
+    def to_json : JSON::Any
+      @data
     end
 
     # define name of cmd
