@@ -7,7 +7,8 @@ define_aggregate Account, acc, { sum: { type: Int32, default: 0}, ts: {type: Tim
 is_valid? Account do
 end
 
-define_commands CmdH, Account, { cmd: CreateAcc, event: AccCreated , prop: { sum: Int64, ts: {type: Time, default: Time.utc_now} } },
+define_commands CmdH, Account,
+              { cmd: CreateAcc, event: AccCreated , create: true, prop: { sum: Int64, ts: {type: Time, default: Time.utc_now} } },
               { cmd: DeleteAcc, event: AccDeleted, prop: { ts: Time } }
 
 impl_event Account, AccCreated do
@@ -28,6 +29,11 @@ cmd = CmdH.cmd_factory("CreateAcc","test","")
 puts ">>>#{cmd.name}"
 
 event = Account.event("AccCreated",%({ "sum" : 3 }))
+if event.create
+  puts "creating"
+else
+  puts "not creating"
+end
 puts event.to_json
 
 handler.handle(cmd)

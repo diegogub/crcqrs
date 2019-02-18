@@ -2,6 +2,7 @@ require "ulid"
 
 module Crcqrs
   abstract class Aggregate
+    property id
     @version : Int64 = -1
     @id : String = ""
 
@@ -25,7 +26,7 @@ module Crcqrs
 
     # defines stream for aggregate
     def stream : String
-      "#{@prefix}#{AGGREGATE_SEPARATOR}#{@id}"
+      "#{self.prefix}#{AGGREGATE_SEPARATOR}#{@id}"
     end
 
     # gets current stream version

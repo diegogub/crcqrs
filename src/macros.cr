@@ -37,7 +37,7 @@ macro define_commands(cmd_handler,agg,*cmds)
   event_emit({{agg}},{{*cmds}})
 
   {% for  c, index in cmds%}
-    def_event({{agg}},{{c[:event]}},{{c[:prop]}})
+    def_event({{agg}},{{c[:event]}},{{ c[:create]}}, {{c[:prop]}})
   {% end %}
 end
 
@@ -100,9 +100,17 @@ end
 
 
 #define event
-macro def_event(agg,name,prop)
+macro def_event(agg,name,create,prop)
   class {{name}} < Crcqrs::Event
     JSON.mapping({{prop}})
+
+    def type
+      {{name.stringify}}
+    end
+
+    def create
+      {{create}}
+    end
   end
 
   class {{agg}} < Crcqrs::Aggregate
