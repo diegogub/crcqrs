@@ -114,7 +114,7 @@ macro def_event(agg,name,create,prop)
   end
 
   class {{agg}} < Crcqrs::Aggregate
-    def apply(id : String, version : Int64, event : {{name}})
+    def apply(store : Crcqrs::Store, version : Int64, event : {{name}})
       raise Exception.new("Event is not implemented")
     end
   end
@@ -123,7 +123,7 @@ end
 
 macro impl_event(agg,name,&block)
   class {{agg}} < Crcqrs::Aggregate
-    def apply(id : String, version : Int64, event : {{name}})
+    def apply(store : Crcqrs::Store, version : Int64, event : {{name}})
       {{ yield(block) }}
       inc_version(version)
     end

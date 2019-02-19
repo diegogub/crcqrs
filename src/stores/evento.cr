@@ -3,6 +3,8 @@ require "json"
 
 module Crcqrs
   class StoreEvent
+    property t, d
+
     JSON.mapping(
       t: String,
       d: JSON::Any
@@ -15,8 +17,6 @@ module Crcqrs
   end
 
   class EventoStore < Crcqrs::Store
-
-
     @cli : Evento::Client
 
     def initialize(address : String,port : Int32)
@@ -42,11 +42,29 @@ module Crcqrs
     end
 
     def exist(stream : String) : Bool
-      @cli.exist(stream)
+      begin
+        version = @cli.version(stream)
+        version > -1
+      rescue
+        false
+      end
     end
 
     def replay(state : Crcqrs::Aggregate, snapshot = false)
       puts "replaying ..#{state.stream}"
+      ch = @cli.read state.stream
+      while true
+        event = ch.receive?
+        case event
+        when nil
+          puts "breaking.."
+          break
+        else
+          sevent = StoreEvent.from_json(event[:data])
+          state.apply(self, event[:version],typeof(state).event(sevent.t,sevent.d.to_json))
+          puts state.to_json
+        end
+      end
     end
 
   end
