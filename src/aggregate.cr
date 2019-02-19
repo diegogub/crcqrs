@@ -31,7 +31,7 @@ module Crcqrs
 
     # gets current stream version
     def version : Int64
-      version
+      @version
     end
 
     def string : String

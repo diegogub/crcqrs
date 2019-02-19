@@ -61,7 +61,7 @@ module Crcqrs
           break
         else
           sevent = StoreEvent.from_json(event[:data])
-          state.apply(self, event[:version],typeof(state).event(sevent.t,sevent.d.to_json))
+          state.apply(self, true, event[:version],typeof(state).event(sevent.t,sevent.d.to_json))
           puts state.to_json
         end
       end

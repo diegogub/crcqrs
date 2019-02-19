@@ -18,26 +18,37 @@ macro is_valid?(name,&block)
   end
 end
 
-macro define_commands(cmd_handler,agg,*cmds)
+macro define_commands(cmd_handler,*cmds)
   class {{cmd_handler}} < Crcqrs::CmdHandler
     def initialize()
       {% for  cmd, index in cmds%}
-        commands << {{ cmd[:cmd].stringify }}
+        commands[{{cmd[:cmd].stringify}}] = {{ cmd[:agg] }}.from_json("{}")
         events << {{ cmd[:event].stringify }}
       {% end %}
     end
 
+    {% for  cmd, index in cmds%}
+      def self.emit_agg(cmd : {{cmd[:cmd]}},id : String = "") : Crcqrs::Aggregate
+        agg = {{cmd[:agg]}}.from_json("{}")
+        agg.id = id
+        return agg
+      end
+    {% end %}
+
   end
 
   {% for  c, index in cmds%}
-    cmd({{cmd_handler}},{{c[:cmd]}})
+    cmd({{cmd_handler}},{{c[:cmd]}},{{c[:event]}})
   {% end %}
 
   cmd_emit({{cmd_handler}},{{*cmds}})
-  event_emit({{agg}},{{*cmds}})
 
   {% for  c, index in cmds%}
-    def_event({{agg}},{{c[:event]}},{{ c[:create]}}, {{c[:prop]}})
+    event_emit({{c[:agg]}},{{*cmds}})
+  {% end %}
+
+  {% for  c, index in cmds%}
+    def_event({{c[:agg]}},{{c[:event]}},{{ c[:create]}}, {{c[:prop]}})
   {% end %}
 end
 
@@ -80,20 +91,21 @@ end
 
 
 # define command for determinated command handler
-macro cmd(cmd_handler,cmd)
+macro cmd(cmd_handler,cmd,event)
   class {{cmd}} < Crcqrs::Cmd
     def name
       {{cmd.stringify}}
     end
 
     def event
-      {{cmd.stringify}}
+      {{event.stringify}}
     end
   end
 
   # Define default handler for command, should emit default event with cmd data
   class {{cmd_handler}} < Crcqrs::CmdHandler
-    def handle(cmd : {{cmd}})
+    def handle(cmd : {{cmd}}) : Crcqrs::Event
+      typeof(@commands[cmd.name]).event(cmd.event,cmd.data.to_json)
     end
   end
 end
@@ -114,7 +126,7 @@ macro def_event(agg,name,create,prop)
   end
 
   class {{agg}} < Crcqrs::Aggregate
-    def apply(store : Crcqrs::Store, version : Int64, event : {{name}})
+    def apply(store : Crcqrs::Store, replay : Bool, version : Int64, event : {{name}})
       raise Exception.new("Event is not implemented")
     end
   end
@@ -123,7 +135,7 @@ end
 
 macro impl_event(agg,name,&block)
   class {{agg}} < Crcqrs::Aggregate
-    def apply(store : Crcqrs::Store, version : Int64, event : {{name}})
+    def apply(store : Crcqrs::Store, replay : Bool, version : Int64, event : {{name}})
       {{ yield(block) }}
       inc_version(version)
     end

@@ -5,9 +5,8 @@ require "time"
 
 module Crcqrs
   abstract class CmdHandler
-    property commands
-    property events
-    @commands : Array(String) = Array(String).new()
+    property commands,events
+    @commands : Hash(String,Aggregate) = Hash(String,Aggregate).new()
     @events : Array(String) = Array(String).new()
   end
 
