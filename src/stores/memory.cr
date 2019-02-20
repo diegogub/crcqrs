@@ -2,10 +2,10 @@ require "../*"
 
 module Crcqrs
   class MemoryStore < Crcqrs::Store
-    @table : Hash(String,Array(Crcqrs::Event))
+    @table : Hash(String, Array(Crcqrs::Event))
 
-    def initialize()
-      @table = Hash(String,Array(Crcqrs::Event)).new()
+    def initialize
+      @table = Hash(String, Array(Crcqrs::Event)).new
     end
 
     def save(stream : String, event : Event)
@@ -18,6 +18,5 @@ module Crcqrs
     # replay aggregate from store
     def replay(state : Crcqrs::Aggregate, snapshot = false)
     end
-
   end
 end

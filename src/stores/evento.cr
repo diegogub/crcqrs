@@ -19,18 +19,20 @@ module Crcqrs
   class EventoStore < Crcqrs::Store
     @cli : Evento::Client
 
-    def initialize(address : String,port : Int32)
-      @cli = Evento::Client.new(address,port)
-      puts "Checking store version:#{@cli.store_version()}"
+    def initialize(address : String, port : Int32, @dev = false)
+      @cli = Evento::Client.new(address, port)
+      if @dev
+        puts "Initialized store with total version:#{@cli.store_version}"
+      end
     end
 
     def save(agg : Crcqrs::Aggregate, event : Event) : Int64 | Crcqrs::StoreError
       e = StoreEvent.new(event)
       begin
         if event.create
-          @cli.store(agg.stream,e.to_json, id = "", create = true)
+          @cli.store(agg.stream, e.to_json, id = "", create = true)
         else
-          @cli.store(agg.stream,e.to_json, id = "", create = false)
+          @cli.store(agg.stream, e.to_json, id = "", create = false)
         end
       rescue Evento::LockError
         StoreError::Lock
@@ -50,22 +52,26 @@ module Crcqrs
       end
     end
 
-    def replay(state : Crcqrs::Aggregate, snapshot = false)
-      puts "replaying ..#{state.stream}"
+    def replay(state : Crcqrs::Aggregate, snapshot = false) : Crcqrs::Aggregate
       ch = @cli.read state.stream
       while true
         event = ch.receive?
         case event
         when nil
-          puts "breaking.."
           break
         else
           sevent = StoreEvent.from_json(event[:data])
-          state.apply(self, true, event[:version],typeof(state).event(sevent.t,sevent.d.to_json))
-          puts state.to_json
+          if @dev
+            puts "Event:"
+            puts event.to_json
+          end
+
+          # empty context, we are replaying events
+          state.apply(self, event[:version], typeof(state).event(sevent.t, sevent.d.to_json), true)
         end
       end
-    end
 
+      return state
+    end
   end
 end

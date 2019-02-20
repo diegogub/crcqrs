@@ -1,15 +1,13 @@
 module Crcqrs
-
   enum StoreError
     Exist
     Lock
     Failed
   end
 
-
   abstract class Store
     # saves event into store
-    abstract def save(agg : Aggregate, event : Event, id = "",create = false, lock = Int64.new(-1)) : (Int64 | StoreResult)
+    abstract def save(agg : Aggregate, event : Event, id = "", create = false, lock = Int64.new(-1)) : (Int64 | StoreResult)
 
     # checks if aggregate exist
     abstract def exist(stream : String) : Bool
