@@ -16,12 +16,22 @@ module Crcqrs
   end
 end
 
-macro commands(*commands)
+macro commands(agg,*commands)
   {% for c in commands %}
-    class {{c}} < Crcqrs::Command
-      def name
-        {{c.stringify}}
+    module Crcqrs
+      class {{c}} < Crcqrs::Command
+        def name
+          {{c.stringify}}
+        end
+      end
+
+      class {{agg}} < Crcqrs::Aggregate
+        def handle(cmd : {{c}}) : Crcqrs::Event
+        end
       end
     end
   {% end %}
+
+  def map_command(agg_id : String, name : String,data : String) : Crcqrs::Command
+  end
 end
