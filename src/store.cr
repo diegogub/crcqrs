@@ -1,3 +1,5 @@
+require "./stores/memory"
+
 module Crcqrs
   enum StoreError
     Exist

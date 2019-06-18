@@ -11,8 +11,4 @@ dependencies:
   ulid:
     github: "SuperPaintman/ulid"
 
-  evento:
-    git: git@gitlab.com:diegogub/evento.git
-    branch: develop
-
 license: MIT
