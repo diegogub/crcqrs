@@ -1,7 +1,13 @@
+require "ulid"
+
 module Crcqrs
   abstract class Event
-    abstract def id : String
+    property version 
+    property id = ULID.generate
+    property type = ""
+
+    @version : Int64 = -1
+
     abstract def type : String
-    abstract def valid : Bool
   end
 end

@@ -2,19 +2,22 @@ require "./stores/memory"
 
 module Crcqrs
   enum StoreError
+    NotFound 
     Exist
     Lock
     Failed
   end
 
-  abstract class Store
-    # saves event into store
-    abstract def save(agg : Aggregate, event : Event, id = "", create = false, lock = Int64.new(-1)) : (Int64 | StoreResult)
+  alias StoreParams = { create: Bool, lock: Int64 }
 
-    # checks if aggregate exist
-    abstract def exist(stream : String) : Bool
+  abstract class Store
+    abstract def init()
+    # saves event into store
+    abstract def save(stream : String , event : Event, create = false, lock = -1) : (Int64 | StoreResult)
 
     # replay aggregate from store
-    abstract def replay(state : Crcqrs::Aggregate, snapshot = false)
+    abstract def get_events(stream : String, from : Int64) : (Iterator(Event) | StoreError)
+
+    abstract def stream_exist(stream : String) : Bool
   end
 end

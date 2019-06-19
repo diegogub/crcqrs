@@ -9,6 +9,6 @@ crystal: 0.27.2
 
 dependencies:
   ulid:
-    github: "SuperPaintman/ulid"
+    github: "diegogub/ulid"
 
 license: MIT
