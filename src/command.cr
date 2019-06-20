@@ -6,6 +6,13 @@ module Crcqrs
 
   abstract class Command
     abstract def name : String
+    def create : Bool
+        false
+    end
+
+    def exist : Bool
+        true
+    end
   end
 
   # classes responsable to validate commands, reading repositories, indexes and data
@@ -27,7 +34,23 @@ module Crcqrs
       end
   end
 
-  macro define_command(name, properties)
+  macro command_must_create_agg(name)
+      class {{name}} < Crcqrs::Command
+          def create : Bool
+              true
+          end
+      end
+  end
+
+  macro command_agg_no_exist(name)
+      class {{name}} < Crcqrs::Command
+          def exist: Bool
+              false
+          end
+      end
+  end
+
+  macro define_command(aggregate, name, properties, &block)
       class {{name}} < Crcqrs::Command
           JSON.mapping(
               {{properties}}
@@ -48,6 +71,12 @@ module Crcqrs
                 @{{key}}
               end
           {% end %}
+      end
+
+      class {{aggregate}} < Crcqrs::AggregateRoot
+          def handle_command(state : Crcqrs::Aggregate, cmd : {{name}}) : Crcqrs::CommandResult
+              {{ yield(block) }}
+          end
       end
   end
 end

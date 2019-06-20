@@ -15,9 +15,14 @@ module Crcqrs
     # store bucket, defaults to memory store
     @store : Store
 
+
     def init(store = MemoryStore.new)
       @store = store
       @store.init
+    end
+
+    def store 
+        @store
     end
 
     def add_aggregate(agg : AggregateRoot)
@@ -29,18 +34,28 @@ module Crcqrs
     end
 
     def rebuild_aggregate(aggregate_root : AggregateRoot, stream : String, agg : Aggregate) : Aggregate
-      resp = @store.get_events(aggregate_root, stream, -1)
+      cache_hit = @store.hit_cache(stream)
+      version_start = -1_i64
+      case cache_hit
+      when Crcqrs::CacheValue
+          version_start = cache_hit.version
+          agg = aggregate_root.from_json(agg.id,cache_hit.data)
+      else
+          puts cache_hit
+      end
+      resp = @store.get_events(aggregate_root, stream, version_start)
       case resp
       when StoreError::NotFound
       when StoreError::Failed
-        puts resp
         raise Exception.new("Failed to generate state from store")
       when StoreError
       else
         resp.each do |e|
           agg.apply(e)
+          agg.version = e.version
         end
       end
+      @store.cache(stream,agg)
 
       agg
     end
@@ -49,9 +64,35 @@ module Crcqrs
     #  - debug : more verbose execution
     #  - mock : does not save event into eventstore
     #  - log  : logs command into eventstore
-    def execute(agg_name : String, agg_id : String, cmd : Command, debug = false, mock = false, log = false) : CommandResult
+    def execute(agg_name : String, agg_id : String, cmd : Command, debug = false, mock = false, log = false) : Crcqrs::CommandResult
       begin
         cmd_validators = @aggregates[agg_name].validators
+
+
+
+        agg_root = @aggregates[agg_name]
+        agg = agg_root.new(agg_id)
+
+        begin
+          stream = build_stream(agg_root, agg)
+          if debug 
+            puts "[#LOG] saving into:" + stream
+          end
+
+          if cmd.create
+            if @store.stream_exist(stream)
+                return "Aggregate already exist, failed to execute command: " + cmd.name
+            end
+          else
+              if cmd.exist && !@store.stream_exist(stream)
+                    return "Aggregate does not exist, failed to execute command: " + cmd.name
+              end
+          end
+
+          agg = rebuild_aggregate(agg_root, stream, agg)
+        rescue e
+          return "Failed to rebuild aggregate: " + e.message.as(String)
+        end
 
         if cmd_validators.has_key?(cmd.name)
           cmd_validators[cmd.name].each do |val|
@@ -67,20 +108,17 @@ module Crcqrs
           end
         end
 
-        agg_root = @aggregates[agg_name]
-        agg = agg_root.new(agg_id)
-        begin
-          stream = build_stream(agg_root, agg)
-          agg = rebuild_aggregate(agg_root, stream, agg)
-        rescue e
-          return "Failed to rebuild aggregate: " + e.message.as(String)
-        end
-
         # handle command
         cmd_result = agg_root.handle_command(agg, cmd)
         case cmd_result
         when Event
-          # Store event into store
+            store_resp = @store.save(stream,cmd_result)
+            case store_resp
+            when StoreError
+                return store_resp.as(String)
+            else
+                cmd_result
+            end
         else
           if debug
             puts "[#Error] Failed to execute command: " + cmd_result

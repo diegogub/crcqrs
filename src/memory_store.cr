@@ -4,11 +4,29 @@ module Crcqrs
     @initialized : Bool = false
     @streams : Hash(String, Array(Int64)) = Hash(String, Array(Int64)).new
     @events : Array(Event) = Array(Event).new
+    @cache : Hash(String,Crcqrs::CacheValue) =  Hash(String,Crcqrs::CacheValue).new
 
     def init
       @initialize = true
       @streams = Hash(String, Array(Int64)).new
       @events = Array(Event).new
+      @cache = Hash(String,Crcqrs::CacheValue).new
+    end
+
+
+    def hit_cache(stream : String) : (Crcqrs::CacheValue | StoreError)
+        begin
+            @cache[stream]
+        rescue
+            Crcqrs::StoreError::MissCache
+        end
+    end
+
+    def cache(stream : String, agg : Aggregate)
+        val = Crcqrs::CacheValue.new
+        val.version = agg.version
+        val.data = agg.to_json
+        @cache[stream] = val
     end
 
     def save(stream : String, event : Event, create = false, lock = -1) : (Int64 | StoreError)
@@ -42,8 +60,14 @@ module Crcqrs
 
       begin
         @mutex.lock
-        @streams[stream].each do |v|
-          events << @events[v - 1]
+        if from > 0 
+            @streams[stream].skip(from).each do |v|
+              events << @events[v - 1]
+            end
+        else
+            @streams[stream].each do |v|
+              events << @events[v - 1]
+            end
         end
       rescue
         StoreError::Failed

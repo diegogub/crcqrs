@@ -10,12 +10,12 @@ module Crcqrs
     abstract def prefix : String
 
     # validators for each command, could be from auth to check aggregates IDs
-    abstract def validators : Hash(String, Array(CommandValidator))
+    abstract def validators : Hash(String, Array(Crcqrs::CommandValidator))
 
     # process event before saving
     @event_process : Array(Event -> Event) = Array(Event -> Event).new
 
-    def handle_command(state : Aggregate, cmd : Command) : CommandResult
+    def handle_command(state : Crcqrs::Aggregate, cmd : Crcqrs::Command) : Crcqrs::CommandResult
       raise Exception.new(cmd.name + " must be implemented")
     end
   end
@@ -39,19 +39,31 @@ module Crcqrs
           def name
               {{name}}
           end
+
           def new(id : String) : {{aggregate_type}}
               {{aggregate_type}}.new id
           end
+
+          def from_json(id : String, data : String) : {{aggregate_type}}
+              agg ={{aggregate_type}}.from_json(data)
+              agg.id = id
+              agg
+          end
+
           def prefix
               {{prefix}}
           end
-          def validators() : Hash(String,Array(CommandValidator))
-              Hash(String,Array(CommandValidator)).new
+          def validators() : Hash(String,Array(Crcqrs::CommandValidator))
+              Hash(String,Array(Crcqrs::CommandValidator)).new
           end
+
           Crcqrs.define_event_factory({{*events}})
       end
 
       class {{aggregate_type}} < Crcqrs::Aggregate
+          property id
+          property version
+
           JSON.mapping({{aggregate_prop}})
           def id
               @id
@@ -76,13 +88,15 @@ module Crcqrs
                   case event
                       {%for e in events %}
                       when {{e}}
-                          self.apply(event.as({{e}}))
+                          puts {{e}}
+                          self.apply(event)
                       {%end%}
                   end
               {%end%}
           end
       end
   end
+
 
   macro apply_event(agg, event, &block)
       class {{agg}} < Crcqrs::Aggregate
