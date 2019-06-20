@@ -1,35 +1,95 @@
 require "ulid"
 
 module Crcqrs
-
-  # Aggregate represents one entity with state
-  abstract class Aggregate 
-      abstract def id : String
-      abstract def version : Int64
-
-      def apply(ch : Event)
-      end
-      
-      # execute after rebuild of aggregate
-      def rebuild_hook()
-      end
-  end
-
   # AggregateRoot is a type of entity, grouped by one prefix
   # A AggregateRoot must handle command and return event or error: AR(Command) -> Event|Error
   abstract class AggregateRoot
+    abstract def new(id : String) : Aggregate
+
     abstract def name : String
     abstract def prefix : String
 
     # validators for each command, could be from auth to check aggregates IDs
-    abstract def validators : Hash(String,Array(CommandValidator))
+    abstract def validators : Hash(String, Array(CommandValidator))
 
     # process event before saving
     @event_process : Array(Event -> Event) = Array(Event -> Event).new
 
     def handle_command(state : Aggregate, cmd : Command) : CommandResult
-        raise Exception.new(cmd.name + " must be implemented")
+      raise Exception.new(cmd.name + " must be implemented")
     end
   end
 
+  # Aggregate represents one entity with state
+  abstract class Aggregate
+    abstract def id : String
+    abstract def version : Int64
+
+    # Apply should be implemented for each event
+
+    # execute after rebuild of aggregate
+    def rebuild_hook
+    end
+  end
+
+  # aggregate_root creates whole aggregate root
+  macro aggregate_root(t, name, prefix, aggregate_type, aggregate_prop, *events)
+      ## defines aggregate root
+      class {{t}} < Crcqrs::AggregateRoot
+          def name
+              {{name}}
+          end
+          def new(id : String) : {{aggregate_type}}
+              {{aggregate_type}}.new id
+          end
+          def prefix
+              {{prefix}}
+          end
+          def validators() : Hash(String,Array(CommandValidator))
+              Hash(String,Array(CommandValidator)).new
+          end
+          Crcqrs.define_event_factory({{*events}})
+      end
+
+      class {{aggregate_type}} < Crcqrs::Aggregate
+          JSON.mapping({{aggregate_prop}})
+          def id
+              @id
+          end
+
+          @id : String = ""
+
+          @version : Int64 = -1
+
+          def initialize(@id)
+              {% for key, value in aggregate_prop %}
+                  @{{key}} = {{value[:default]}}
+              {% end %}
+          end
+
+          def version
+              @version
+          end
+
+          def apply(event : Crcqrs::Event)
+              {%begin%}
+                  case event
+                      {%for e in events %}
+                      when {{e}}
+                          self.apply(event.as({{e}}))
+                      {%end%}
+                  end
+              {%end%}
+          end
+      end
+  end
+
+  macro apply_event(agg, event, &block)
+      class {{agg}} < Crcqrs::Aggregate
+
+          def apply(event : {{event}})
+            {{ yield(block) }}
+          end
+      end
+  end
 end

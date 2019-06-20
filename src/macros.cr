@@ -1,9 +1,7 @@
-
-
 # TODO
 # Must redefine all macros to make it clear
 #
-#macro define_aggregate(name, prefix, properties, *events)
+# macro define_aggregate(name, prefix, properties, *events)
 #  class {{name}} < Crcqrs::Aggregate
 #    JSON.mapping({{properties}})
 #
@@ -29,17 +27,17 @@
 #      end
 #    {% end %}
 #  end
-#end
+# end
 #
-#macro aggregate_valid?(name, &block)
+# macro aggregate_valid?(name, &block)
 #  class {{name}} < Crcqrs::Aggregate
 #    def is_valid?
 #      {{ yield(block) }}
 #    end
 #  end
-#end
+# end
 #
-#macro impl_event(agg, name, &block)
+# macro impl_event(agg, name, &block)
 #  class {{agg}} < Crcqrs::Aggregate
 #    def apply(context : Crcqrs::Context, store : Crcqrs::Store, version : Int64, event : {{name}},replay : Bool = false) : Crcqrs::Aggregate
 #      {{ yield(block) }}
@@ -47,9 +45,9 @@
 #      return self
 #    end
 #  end
-#end
+# end
 
-#macro commands(agg,*commands)
+# macro commands(agg,*commands)
 #  {% for c in commands %}
 #    module Crcqrs
 #      class {{c}} < Crcqrs::Command
@@ -67,4 +65,4 @@
 #
 #  def map_command(agg_id : String, name : String,data : String) : Crcqrs::Command
 #  end
-#end
+# end
