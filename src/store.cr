@@ -11,12 +11,12 @@ module Crcqrs
 
   alias StoreParams = {create: Bool, lock: Int64}
 
-  class CacheValue 
-      property version
-      property data
+  class CacheValue
+    property version
+    property data
 
-      @version : Int64 = -1_i64
-      @data : String = "{}"
+    @version : Int64 = -1_i64
+    @data : String = "{}"
   end
 
   abstract class Store
@@ -28,8 +28,16 @@ module Crcqrs
     abstract def get_events(agg : AggregateRoot, stream : String, from : Int64) : (Iterator(Event) | StoreError)
 
     abstract def stream_exist(stream : String) : Bool
-    
+
+    # cache aggregate state on N version
     abstract def cache(stream : String, agg : Aggregate)
-    abstract def hit_cache(stream : String) : (CacheValue|StoreError)
+
+    # try to load aggregate from cache
+    abstract def hit_cache(stream : String) : (CacheValue | StoreError)
+
+    # correlative version of store, all events
+    abstract def correlative_version : Int64
+
+    abstract def get_events_correlative(from : Int64) : (Iterator(Crcqrs::RawEvent) | StoreError)
   end
 end

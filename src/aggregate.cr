@@ -84,19 +84,18 @@ module Crcqrs
           end
 
           def apply(event : Crcqrs::Event)
-              {%begin%}
+              {% begin %}
                   case event
-                      {%for e in events %}
+                      {% for e in events %}
                       when {{e}}
                           puts {{e}}
                           self.apply(event)
-                      {%end%}
+                      {% end %}
                   end
-              {%end%}
+              {% end %}
           end
       end
   end
-
 
   macro apply_event(agg, event, &block)
       class {{agg}} < Crcqrs::Aggregate

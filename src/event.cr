@@ -9,7 +9,7 @@ module Crcqrs
     abstract def type : String
   end
 
-  class RawEvent
+  class RawEvent < Event
     @data : JSON::Any = JSON.parse("{}")
 
     def type
@@ -42,7 +42,7 @@ module Crcqrs
   end
 
   macro define_event_factory(*events)
-     def gen_event(type : String,json : String) : {%begin%}({%for e in events %} {{e}} | {% end %} Nil) {%end%}
+     def gen_event(type : String,json : String) : {% begin %}({% for e in events %} {{e}} | {% end %} Nil) {% end %}
           {% begin %}
               case type 
                  {% for e in events %}

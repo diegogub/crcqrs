@@ -6,12 +6,13 @@ module Crcqrs
 
   abstract class Command
     abstract def name : String
+
     def create : Bool
-        false
+      false
     end
 
     def exist : Bool
-        true
+      true
     end
   end
 
