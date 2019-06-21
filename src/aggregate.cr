@@ -3,6 +3,8 @@ require "ulid"
 module Crcqrs
   # AggregateRoot is a type of entity, grouped by one prefix
   # A AggregateRoot must handle command and return event or error: AR(Command) -> Event|Error
+  alias ConflictError = String
+
   abstract class AggregateRoot
     abstract def new(id : String) : Aggregate
 
@@ -11,6 +13,8 @@ module Crcqrs
 
     # validators for each command, could be from auth to check aggregates IDs
     abstract def validators : Hash(String, Array(Crcqrs::CommandValidator))
+
+    abstract def conflict(type : String, events : Array(String)) : (ConflictError | Nil)
 
     # process event before saving
     @event_process : Array(Event -> Event) = Array(Event -> Event).new
@@ -55,6 +59,10 @@ module Crcqrs
           end
           def validators() : Hash(String,Array(Crcqrs::CommandValidator))
               Hash(String,Array(Crcqrs::CommandValidator)).new
+          end
+
+          def conflict(type : String, events : Array(String)) : (ConflictError | Nil)
+              Nil
           end
 
           Crcqrs.define_event_factory({{*events}})

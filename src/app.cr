@@ -32,16 +32,21 @@ module Crcqrs
       "#{@name}|#{root.name}|#{agg.id}"
     end
 
-    def rebuild_aggregate(aggregate_root : AggregateRoot, stream : String, agg : Aggregate) : Aggregate
-      cache_hit = @store.hit_cache(stream)
+    # rebuild_aggregate, rebuilds aggregate from past events
+    def rebuild_aggregate(aggregate_root : AggregateRoot, stream : String, agg : Aggregate, use_cache : Bool) : Aggregate
       version_start = -1_i64
-      case cache_hit
-      when Crcqrs::CacheValue
-        version_start = cache_hit.version
-        agg = aggregate_root.from_json(agg.id, cache_hit.data)
-      else
-        puts cache_hit
+
+      if use_cache
+        # try to hit cache
+        cache_hit = @store.hit_cache(stream)
+        case cache_hit
+        when Crcqrs::CacheValue
+          version_start = cache_hit.version
+          agg = aggregate_root.from_json(agg.id, cache_hit.data)
+        else
+        end
       end
+
       resp = @store.get_events(aggregate_root, stream, version_start)
       case resp
       when StoreError::NotFound
@@ -54,16 +59,21 @@ module Crcqrs
           agg.version = e.version
         end
       end
-      @store.cache(stream, agg)
+
+      if use_cache
+        @store.cache(stream, agg)
+      end
 
       agg
     end
 
+    # f(cmd) -> event
     # Execute, executes command into system, using debug gets more verbose
     #  - debug : more verbose execution
     #  - mock : does not save event into eventstore
     #  - log  : logs command into eventstore
-    def execute(agg_name : String, agg_id : String, cmd : Command, debug = false, mock = false) : Crcqrs::CommandResult
+    #  - current_version : to check concurrency issues
+    def execute(agg_name : String, agg_id : String, cmd : Command, current_version = -1, debug = false, mock = false) : Crcqrs::CommandResult
       begin
         cmd_validators = @aggregates[agg_name].validators
 

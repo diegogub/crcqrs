@@ -37,13 +37,14 @@ accounts = Accounts.new
 app = Crcqrs::App.new("banking", "bk")
 
 redis_store = Crcqrs::RedisStore.new
+redis_store.init
 app.init
 app.add_aggregate(accounts)
 
 cmd = CreateAccount.from_json(%({ "balance" : 0}))
 puts app.execute("account", "testing", cmd, debug = true)
 
-(1..10_000).each do |i|
+(1..1000).each do |i|
   cmd2 = DepositMoney.from_json(%({ "amount" : 1}))
   app.execute("account", "testing", cmd2, debug = false)
 end

@@ -41,6 +41,11 @@ module Crcqrs
       begin
         @mutex.lock
         version = @streams[stream].size.to_i64 - 1
+        if lock >= 0
+          if version != lock
+            StoreError::Lock
+          end
+        end
         event.version = version + 1
         @events << event
         @streams[stream] << @events.size.to_i64
@@ -51,7 +56,7 @@ module Crcqrs
       end
     end
 
-    def get_events(agg_root : AggregateRoot, stream : String, from : Int64) : (Iterator(Event) | StoreError)
+    def get_events(agg_root : AggregateRoot, stream : String, from : Int64) : (StreamCursor | StoreError)
       events = Array(Event).new
       if !self.stream_exist(stream)
         StoreError::NotFound
@@ -74,7 +79,18 @@ module Crcqrs
         @mutex.unlock
       end
 
-      events.each
+      cursor = StreamCursor.new
+      spawn do
+        events.each do |e|
+          cursor.channel.send e
+        end
+        begin
+          cursor.channel.close
+        rescue
+        end
+      end
+
+      cursor
     end
 
     def stream_exist(stream : String) : Bool
