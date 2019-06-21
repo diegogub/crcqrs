@@ -40,7 +40,7 @@ app.add_aggregate(accounts)
 cmd = CreateAccount.from_json(%({ "balance" : 0}))
 puts app.execute("account", "testing", cmd, debug = true)
 
-(1..1_000_000).each do |i|
+(1..10_000).each do |i|
   cmd2 = DepositMoney.from_json(%({ "amount" : 1}))
   app.execute("account", "testing", cmd2, debug = false)
 end
