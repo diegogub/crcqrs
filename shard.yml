@@ -10,5 +10,8 @@ crystal: 0.29.0
 dependencies:
   ulid:
     github: "diegogub/ulid"
+  redis:
+    github: stefanwille/crystal-redis
+    version: ~> 2.2.0
 
 license: MIT

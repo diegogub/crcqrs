@@ -35,6 +35,9 @@ end
 
 accounts = Accounts.new
 app = Crcqrs::App.new("banking", "bk")
+
+redis_store = Crcqrs::RedisStore.new
+app.init
 app.add_aggregate(accounts)
 
 cmd = CreateAccount.from_json(%({ "balance" : 0}))
