@@ -19,7 +19,7 @@ module Crcqrs
     # process event before saving
     @event_process : Array(Event -> Event) = Array(Event -> Event).new
 
-    def handle_command(state : Crcqrs::Aggregate, cmd : Crcqrs::Command) : Crcqrs::CommandResult
+    def handle_command(state : Crcqrs::Aggregate, cmd : Crcqrs::Command) : CommandResult
       raise Exception.new(cmd.name + " must be implemented")
     end
   end
@@ -29,7 +29,16 @@ module Crcqrs
     abstract def id : String
     abstract def version : Int64
 
+    @version : Int64 = -1_i64
+
     # Apply should be implemented for each event
+    def set_version(version : Int64)
+      if version < @version
+        raise Exception.new("Invalid version to set to aggregate")
+      else
+        @version = version.as(Int64)
+      end
+    end
 
     # execute after rebuild of aggregate
     def rebuild_hook
@@ -78,8 +87,6 @@ module Crcqrs
           end
 
           @id : String = ""
-
-          @version : Int64 = -1
 
           def initialize(@id)
               {% for key, value in aggregate_prop %}

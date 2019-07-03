@@ -12,8 +12,15 @@ module Crcqrs
   alias StoreParams = {create: Bool, lock: Int64}
 
   class CacheValue
+    JSON.mapping(
+      version: {type: Int64, key: "v"},
+      data: {type: String, key: "d", default: "{}"}
+    )
     property version
     property data
+
+    def initialize
+    end
 
     @version : Int64 = -1_i64
     @data : String = "{}"
@@ -23,7 +30,7 @@ module Crcqrs
     include Iterator(Event)
     property channel
 
-    @channel : Channel(Event) = Channel(Event).new(100)
+    @channel : Channel(Event) = Channel(Event).new(1000)
 
     def next
       if @channel.closed?
@@ -43,6 +50,7 @@ module Crcqrs
     # saves event into store
     abstract def save(stream : String, event : Event, create = false, lock = -1) : (Int64 | StoreError)
 
+    abstract def version(stream : String) : (Int64 | StoreError)
     # replay aggregate from store
     abstract def get_events(agg : AggregateRoot, stream : String, from : Int64) : (StreamCursor | StoreError)
 

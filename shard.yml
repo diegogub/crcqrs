@@ -13,5 +13,7 @@ dependencies:
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.2.0
+  pg:
+    github: will/crystal-pg
 
 license: MIT

@@ -77,6 +77,8 @@ module Crcqrs
       class {{aggregate}} < Crcqrs::AggregateRoot
           def handle_command(state : Crcqrs::Aggregate, cmd : {{name}}) : Crcqrs::CommandResult
               {{ yield(block) }}
+
+              state
           end
       end
   end

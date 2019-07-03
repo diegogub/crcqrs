@@ -1,5 +1,7 @@
 module Crcqrs
   class App
+    property store
+
     def initialize(@name, @prefix)
       @store = MemoryStore.new
     end
@@ -41,9 +43,10 @@ module Crcqrs
         cache_hit = @store.hit_cache(stream)
         case cache_hit
         when Crcqrs::CacheValue
-          version_start = cache_hit.version
+          version_start = cache_hit.version + 1
           agg = aggregate_root.from_json(agg.id, cache_hit.data)
         else
+          puts "miss"
         end
       end
 
@@ -54,9 +57,11 @@ module Crcqrs
         raise Exception.new("Failed to generate state from store")
       when StoreError
       else
+        count = 0
         resp.each do |e|
+          count = count + 1
           agg.apply(e)
-          agg.version = e.version
+          agg.set_version(e.version)
         end
       end
 
@@ -73,7 +78,7 @@ module Crcqrs
     #  - mock : does not save event into eventstore
     #  - log  : logs command into eventstore
     #  - current_version : to check concurrency issues
-    def execute(agg_name : String, agg_id : String, cmd : Command, current_version = -1, debug = false, mock = false) : Crcqrs::CommandResult
+    def execute(agg_name : String, agg_id : String, cmd : Command, current_version = -1, debug = false, mock = false) : (Crcqrs::Aggregate | String)
       begin
         cmd_validators = @aggregates[agg_name].validators
 
@@ -96,7 +101,7 @@ module Crcqrs
             end
           end
 
-          agg = rebuild_aggregate(agg_root, stream, agg)
+          agg = rebuild_aggregate(agg_root, stream, agg, true)
         rescue e
           return "Failed to rebuild aggregate: " + e.message.as(String)
         end
@@ -125,17 +130,18 @@ module Crcqrs
             store_resp = @store.save(stream, cmd_result)
             case store_resp
             when StoreError
-              return store_resp.as(String)
+              return "Failed to save event into store"
             else
               cmd_result
             end
           end
         else
           if debug
-            puts "[#Error] Failed to execute command: " + cmd_result
+            puts "[#Error] Failed to execute command " + cmd.name
           end
         end
-        cmd_result
+
+        agg
       rescue e
         puts e
 

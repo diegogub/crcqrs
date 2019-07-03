@@ -28,6 +28,15 @@ module Crcqrs
       @cache[stream] = val
     end
 
+    def version(stream : String) : (Int64 | StoreError)
+      begin
+        version = @streams[stream].size.to_i64 - 1
+        version
+      rescue
+        StoreError::NotFound
+      end
+    end
+
     def save(stream : String, event : Event, create = false, lock = -1) : (Int64 | StoreError)
       begin
         v = @streams[stream]

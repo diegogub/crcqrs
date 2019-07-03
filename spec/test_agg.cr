@@ -14,8 +14,7 @@ Crcqrs.define_command Accounts, CreateAccount, {balance: {type: Int64, default: 
 
   event = AccountCreated.new
   event.balance = cmd.balance
-
-  event
+  return event
 end
 Crcqrs.command_must_create_agg(CreateAccount)
 
@@ -38,20 +37,26 @@ app = Crcqrs::App.new("banking", "bk")
 
 redis_store = Crcqrs::RedisStore.new
 redis_store.init
+
+pg_store = Crcqrs::PostgresStore.new "test"
+pg_store.init
+
 app.init
+app.store = pg_store
 app.add_aggregate(accounts)
 
 cmd = CreateAccount.from_json(%({ "balance" : 0}))
-puts app.execute("account", "testing", cmd, debug = true)
+app.execute("account", "t4", cmd, debug = true)
 
-(1..1000).each do |i|
+(1..100).each do |i|
+  # t = Time.now
+  puts i
   cmd2 = DepositMoney.from_json(%({ "amount" : 1}))
-  app.execute("account", "testing", cmd2, debug = false)
+  puts app.execute("account", "t4", cmd2, debug = false).to_json
+  # t2 = Time.now
+  # puts t2 - t
 end
 
-cmd2 = DepositMoney.from_json(%({ "amount" : 1}))
-res = app.execute("account", "testing", cmd2, debug = true)
-
-acc = accounts.new "testing"
-acc = app.rebuild_aggregate(accounts, "banking|account|testing", acc)
+acc = accounts.new "t4"
+acc = app.rebuild_aggregate(accounts, "banking|account|t4", acc, true)
 puts acc.to_json
