@@ -38,7 +38,7 @@ app = Crcqrs::App.new("banking", "bk")
 redis_store = Crcqrs::RedisStore.new
 redis_store.init
 
-pg_store = Crcqrs::PostgresStore.new "test"
+pg_store = Crcqrs::PostgresStore.new "banking"
 pg_store.init
 
 app.init
@@ -50,7 +50,6 @@ app.execute("account", "t4", cmd, debug = true)
 
 (1..100).each do |i|
   # t = Time.now
-  puts i
   cmd2 = DepositMoney.from_json(%({ "amount" : 1}))
   puts app.execute("account", "t4", cmd2, debug = false).to_json
   # t2 = Time.now
@@ -60,3 +59,7 @@ end
 acc = accounts.new "t4"
 acc = app.rebuild_aggregate(accounts, "banking|account|t4", acc, true)
 puts acc.to_json
+
+
+view = Crcqrs::MemoryProjection.new "testing", pg_store
+view.run

@@ -103,7 +103,6 @@ module Crcqrs
                   case event
                       {% for e in events %}
                       when {{e}}
-                          puts {{e}}
                           self.apply(event)
                       {% end %}
                   end

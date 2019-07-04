@@ -7,20 +7,36 @@ module Crcqrs
     @conn : DB::Database
     @app : String
 
-    def initialize(@app, host = "127.0.0.1", port = "5432", user = "postgres", password = "", db = "postgres")
+    def initialize(@app, host = "127.0.0.1", port = "5432", user = "postgres", password = "")
       @user = user
       @host = host
       @port = port
       @password = password
-      @db = db
-      @conn_string = "postgres://#{@user}@#{@host}:#{@port}/#{@db}?max_pool_size=1009&initial_pool_size=10"
-
+      @conn_string = "postgres://#{@user}@#{@host}:#{@port}?max_pool_size=1000&initial_pool_size=10"
+      @db = "#{@app}_es"
       @conn = DB.open(@conn_string)
     end
 
     def init
       begin
         conn = @conn.checkout
+        begin
+            puts "CREATING DATABASE #{@db}:"
+            puts conn.exec("CREATE DATABASE #{@db};")
+        rescue
+        end
+        sleep 1
+      ensure
+        @conn.close
+      end
+
+      begin
+        #reconnect to databse
+        @conn_string = "postgres://#{@user}@#{@host}:#{@port}/#{@db}?max_pool_size=1000&initial_pool_size=10"
+        @conn = DB.open(@conn_string)
+
+        conn = @conn.checkout
+
         puts conn.exec("
                  CREATE TABLE IF NOT EXISTS events (
                     id                  TEXT UNIQUE NOT NULL,
@@ -30,6 +46,14 @@ module Crcqrs
                     type                TEXT NOT NULL,
                     data                JSONB NOT NULL,
                     PRIMARY KEY(stream,version)
+                 )")
+
+        puts conn.exec("
+                 CREATE TABLE IF NOT EXISTS projections (
+                    id                  TEXT UNIQUE NOT NULL,
+                    version             INT  NOT NULL,
+                    error               TEXT,
+                    PRIMARY KEY(id)
                  )")
 
         puts conn.exec("
@@ -230,7 +254,7 @@ module Crcqrs
             if c.channel.empty?
               break
             end
-            sleep 0.00001
+            sleep 0.000001
           end
           c.channel.close
         ensure
@@ -256,10 +280,52 @@ module Crcqrs
     end
 
     def correlative_version : Int64
-      res @conn.query_one("SELECT correlation_version FROM event ORDER BY correlation_version DSC LIMIT 1", &.read(Int32).to_i64)
+      res = @conn.query_one("SELECT correlation_version FROM events ORDER BY correlation_version DESC LIMIT 1", &.read(Int32).to_i64)
+      case res
+      when Int64
+          res
+      else
+          -1_i64
+      end
     end
 
     def get_events_correlative(from : Int64) : (StreamCursor | StoreError)
+      c = StreamCursor.new
+      spawn do
+        begin
+          conn = @conn.checkout
+          args = [] of DB::Any
+          args << from
+          q = "SELECT id,version,type, data FROM events WHERE correlation_version >= $1 ORDER BY correlation_version ASC"
+          version = -1
+          type = ""
+          data = JSON.parse("{}")
+          conn.query q, args do |rs|
+            rs.each do
+              id, version, type, data = rs.read(String,Int32, String, JSON::Any)
+              event = RawEvent.new
+              event.id = id
+              event.type = type
+              event.version = version.to_i64
+              event.data = data
+              c.channel.send event
+            end
+            rs.close
+          end
+          conn.close
+
+          while !c.channel.empty?
+            if c.channel.empty?
+              break
+            end
+            sleep 0.000001
+          end
+          c.channel.close
+        ensure
+          @conn.close
+        end
+      end
+      c
     end
 
     def cache(stream : String, agg : Aggregate)
@@ -311,5 +377,67 @@ module Crcqrs
         StoreError::MissCache
       end
     end
+
+    def projection(id : String,version : Int64, error : String)
+        begin
+            conn = @conn.checkout
+            args = [] of DB::Any
+            args << id
+            args << version
+            args << error
+            conn.query("INSERT INTO projections (id, version, error) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, error = EXCLUDED.error", args)
+            conn.close
+        ensure
+            case conn
+            when Nil
+            else
+              conn.close
+            end
+        end
+    end
+
+    def get_projection(id : String) : ProjectionStatus
+        begin
+            args = [] of DB::Any
+            args << id
+            conn = @conn.checkout
+            status = ProjectionStatus.new
+            conn.query("SELECT id,version,error FROM projections WHERE id = $1",args) do |rs|
+                rs.each do 
+                    id, v, err = rs.read(String,Int32,String)
+                    status.id = id
+                    status.version = v.to_i64
+                    status.error = err
+                end
+            end
+
+            status
+        ensure
+            conn.close
+        end
+    end
+
+    def list_projections() : Array(ProjectionStatus)
+        list = Array(ProjectionStatus).new
+        begin
+            conn = @conn.checkout
+            conn.query("SELECT id,version,error FROM projections") do |rs|
+                rs.each do
+                    id, v, err = rs.read(String,Int32,String)
+                    status = ProjectionStatus.new
+                    status.id = id
+                    status.version = v.to_i64
+                    status.error = err
+                end
+            end
+        ensure
+            case conn
+            when Nil
+            else
+              conn.close
+            end
+        end
+    end
+
   end
 end

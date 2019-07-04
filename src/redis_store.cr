@@ -143,6 +143,18 @@ module Crcqrs
       @rconn.llen("c")
     end
 
+    def projection(id : String, version : Int64, error : String)
+        #TODO
+    end
+
+    def get_projection(id : String) : ProjectionStatus
+        ProjectionStatus.new
+    end
+
+    def list_projections() : Array(ProjectionStatus)
+        Array(ProjectionStatus).new
+    end
+
     def get_events_correlative(from : Int64) : (Iterator(Crcqrs::RawEvent) | Crcqrs::StoreError)
       Crcqrs::StoreError::Failed
     end

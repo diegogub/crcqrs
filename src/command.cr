@@ -7,6 +7,11 @@ module Crcqrs
   abstract class Command
     abstract def name : String
 
+    # checks if is in conflict with event
+    def conflicts_with(type : String) : Bool
+        false
+    end
+
     def create : Bool
       false
     end
@@ -47,6 +52,23 @@ module Crcqrs
       class {{name}} < Crcqrs::Command
           def exist: Bool
               false
+          end
+      end
+  end
+
+  macro conflicts_with(name,*events)
+      class {{name}} < Crcqrs::Command
+          def conflict_with(type : String) : Bool
+              {% begin %}
+                  case type
+                      {% for e in events %}
+                      when {{e.stringify}}
+                          true
+                      {% end %}
+                      else
+                          false
+                  end
+              {% end %}
           end
       end
   end

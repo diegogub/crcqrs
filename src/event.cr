@@ -10,7 +10,21 @@ module Crcqrs
   end
 
   class RawEvent < Event
+    JSON.mapping(
+        id: String,
+        type: String,
+        version: Int64,
+        data: JSON::Any
+    )
+
+    property data
+    property type
+
+    @type : String = ""
     @data : JSON::Any = JSON.parse("{}")
+
+    def initialize
+    end
 
     def type
       @type

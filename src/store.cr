@@ -67,5 +67,12 @@ module Crcqrs
 
     # try to load aggregate from cache
     abstract def hit_cache(stream : String) : (CacheValue | StoreError)
+
+    # updates status of external projections
+    abstract def projection(id : String, version : Int64, error : String)
+
+    abstract def get_projection(id : String) : ProjectionStatus
+
+    abstract def list_projections() : Array(ProjectionStatus)
   end
 end
