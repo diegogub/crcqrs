@@ -1,8 +1,8 @@
 module Crcqrs
   enum AppError
-      InvalidAggregate
-      AggregateNotFound
-      RebuildFailed
+    InvalidAggregate
+    AggregateNotFound
+    RebuildFailed
   end
 
   class App
@@ -40,27 +40,26 @@ module Crcqrs
       "#{@name}|#{root.name}|#{agg.id}"
     end
 
-
     def get_aggregate(aggregate : String, id : String) : (Aggregate | AppError)
-        if !@aggregates.has_key?(aggregate)
-            return AppError::InvalidAggregate
+      if !@aggregates.has_key?(aggregate)
+        return AppError::InvalidAggregate
+      end
+
+      agg_root = @aggregates[aggregate]
+      agg = agg_root.new(id)
+
+      begin
+        stream = build_stream(agg_root, agg)
+        if !@store.stream_exist(stream)
+          return AppError::AggregateNotFound
         end
 
-        agg_root = @aggregates[aggregate]
-        agg = agg_root.new(id)
+        agg = rebuild_aggregate(agg_root, stream, agg, true)
+      rescue e
+        return AppError::RebuildFailed
+      end
 
-        begin
-          stream = build_stream(agg_root, agg)
-          if !@store.stream_exist(stream)
-             return AppError::AggregateNotFound
-          end
-
-          agg = rebuild_aggregate(agg_root, stream, agg, true)
-        rescue e
-          return AppError::RebuildFailed
-        end
-
-        agg
+      agg
     end
 
     # rebuild_aggregate, rebuilds aggregate from past events
@@ -101,43 +100,43 @@ module Crcqrs
       agg
     end
 
-    def build_agg(agg_root : AggregateRoot,id : String,create : Bool, exist : Bool) : (Aggregate | String)
-        agg = agg_root.new id
-        begin
-          stream = build_stream(agg_root, agg)
-          if create
-            if @store.stream_exist(stream)
-              return "Aggregate already exist, failed to execute command" 
-            end
-          else
-            if exist && !@store.stream_exist(stream)
-                return "Aggregate does not exist, failed to execute command."
-            end
+    def build_agg(agg_root : AggregateRoot, id : String, create : Bool, exist : Bool) : (Aggregate | String)
+      agg = agg_root.new id
+      begin
+        stream = build_stream(agg_root, agg)
+        if create
+          if @store.stream_exist(stream)
+            return "Aggregate already exist, failed to execute command"
           end
-
-          agg = rebuild_aggregate(agg_root, stream, agg, true)
-        rescue e
-          return "Failed to rebuild aggregate: " + e.message.as(String)
+        else
+          if exist && !@store.stream_exist(stream)
+            return "Aggregate does not exist, failed to execute command."
+          end
         end
 
-        agg
+        agg = rebuild_aggregate(agg_root, stream, agg, true)
+      rescue e
+        return "Failed to rebuild aggregate: " + e.message.as(String)
+      end
+
+      agg
     end
 
-    def validate_command(agg_name : String,cmd : Command, debug : Bool)
-        cmd_validators = @aggregates[agg_name].validators
-        if cmd_validators.has_key?(cmd.name)
-          cmd_validators[cmd.name].each do |val|
-            if debug
-              puts "[#LOG] Executing validator to command: " + val.name
-            end
+    def validate_command(agg_name : String, cmd : Command, debug : Bool)
+      cmd_validators = @aggregates[agg_name].validators
+      if cmd_validators.has_key?(cmd.name)
+        cmd_validators[cmd.name].each do |val|
+          if debug
+            puts "[#LOG] Executing validator to command: " + val.name
+          end
 
-            res = val.validate(cmd)
-            case res
-            when CommandError
-              return res
-            end
+          res = val.validate(cmd)
+          case res
+          when CommandError
+            return res
           end
         end
+      end
     end
 
     # f(cmd) -> event
@@ -152,22 +151,20 @@ module Crcqrs
 
         agg_root = @aggregates[agg_name]
 
-        agg = self.build_agg(agg_root,agg_id,cmd.create,cmd.exist)
+        agg = self.build_agg(agg_root, agg_id, cmd.create, cmd.exist)
         case agg
         when String
-            return agg
+          return agg
         else
         end
 
         stream = build_stream(agg_root, agg)
 
-
-        res = self.validate_command(agg_name,cmd, debug)
+        res = self.validate_command(agg_name, cmd, debug)
         case res
         when CommandError
-            return res
+          return res
         else
-
         end
 
         # handle command
@@ -198,6 +195,5 @@ module Crcqrs
         "Failed to execute command"
       end
     end
-
   end
 end

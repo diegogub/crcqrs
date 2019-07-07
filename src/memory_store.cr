@@ -110,16 +110,15 @@ module Crcqrs
       @events.size.to_i64
     end
 
-    def projection(id : String,version : Int64, error : String)
+    def projection(id : String, version : Int64, error : String)
     end
 
     def get_projection(id : String) : ProjectionStatus
-        ProjectionStatus.new
+      ProjectionStatus.new
     end
 
-
-    def list_projections() : Array(ProjectionStatus)
-        Array(ProjectionStatus).new
+    def list_projections : Array(ProjectionStatus)
+      Array(ProjectionStatus).new
     end
 
     def get_events_correlative(from : Int64) : (Iterator(Event) | StoreError)

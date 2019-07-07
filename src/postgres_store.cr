@@ -21,8 +21,8 @@ module Crcqrs
       begin
         conn = @conn.checkout
         begin
-            puts "CREATING DATABASE #{@db}:"
-            puts conn.exec("CREATE DATABASE #{@db};")
+          puts "CREATING DATABASE #{@db}:"
+          puts conn.exec("CREATE DATABASE #{@db};")
         rescue
         end
         sleep 1
@@ -31,7 +31,7 @@ module Crcqrs
       end
 
       begin
-        #reconnect to databse
+        # reconnect to databse
         @conn_string = "postgres://#{@user}@#{@host}:#{@port}/#{@db}?max_pool_size=1000&initial_pool_size=10"
         @conn = DB.open(@conn_string)
 
@@ -283,9 +283,9 @@ module Crcqrs
       res = @conn.query_one("SELECT correlation_version FROM events ORDER BY correlation_version DESC LIMIT 1", &.read(Int32).to_i64)
       case res
       when Int64
-          res
+        res
       else
-          -1_i64
+        -1_i64
       end
     end
 
@@ -302,7 +302,7 @@ module Crcqrs
           data = JSON.parse("{}")
           conn.query q, args do |rs|
             rs.each do
-              id, stream,version, type, data = rs.read(String,String,Int32, String, JSON::Any)
+              id, stream, version, type, data = rs.read(String, String, Int32, String, JSON::Any)
               event = RawEvent.new
               event.stream = stream
               event.id = id
@@ -379,74 +379,73 @@ module Crcqrs
       end
     end
 
-    def projection(id : String,version : Int64, error : String)
-        begin
-            conn = @conn.checkout
-            args = [] of DB::Any
-            args << id
-            args << version
-            args << error
-            conn.query("INSERT INTO projections (id, version, error) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, error = EXCLUDED.error", args)
-            conn.close
-            @conn.close
-        ensure
-            case conn
-            when Nil
-            else
-              conn.close
-            end
+    def projection(id : String, version : Int64, error : String)
+      begin
+        conn = @conn.checkout
+        args = [] of DB::Any
+        args << id
+        args << version
+        args << error
+        conn.query("INSERT INTO projections (id, version, error) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, error = EXCLUDED.error", args)
+        conn.close
+        @conn.close
+      ensure
+        case conn
+        when Nil
+        else
+          conn.close
         end
+      end
     end
 
     def get_projection(id : String) : ProjectionStatus
-        begin
-            args = [] of DB::Any
-            args << id
-            conn = @conn.checkout
+      begin
+        args = [] of DB::Any
+        args << id
+        conn = @conn.checkout
+        status = ProjectionStatus.new
+        conn.query("SELECT id,version,error FROM projections WHERE id = $1", args) do |rs|
+          rs.each do
+            id, v, err = rs.read(String, Int32, String)
+            status.id = id
+            status.version = v.to_i64
+            status.error = err
+          end
+        end
+
+        conn.close
+        @conn.close
+
+        status
+      ensure
+        case conn
+        when Nil
+        else
+          conn.close
+        end
+      end
+    end
+
+    def list_projections : Array(ProjectionStatus)
+      list = Array(ProjectionStatus).new
+      begin
+        conn = @conn.checkout
+        conn.query("SELECT id,version,error FROM projections") do |rs|
+          rs.each do
+            id, v, err = rs.read(String, Int32, String)
             status = ProjectionStatus.new
-            conn.query("SELECT id,version,error FROM projections WHERE id = $1",args) do |rs|
-                rs.each do 
-                    id, v, err = rs.read(String,Int32,String)
-                    status.id = id
-                    status.version = v.to_i64
-                    status.error = err
-                end
-            end
-
-            conn.close
-            @conn.close
-
-            status
-        ensure
-            case conn
-                when Nil
-                else
-                    conn.close
-            end
+            status.id = id
+            status.version = v.to_i64
+            status.error = err
+          end
         end
-    end
-
-    def list_projections() : Array(ProjectionStatus)
-        list = Array(ProjectionStatus).new
-        begin
-            conn = @conn.checkout
-            conn.query("SELECT id,version,error FROM projections") do |rs|
-                rs.each do
-                    id, v, err = rs.read(String,Int32,String)
-                    status = ProjectionStatus.new
-                    status.id = id
-                    status.version = v.to_i64
-                    status.error = err
-                end
-            end
-        ensure
-            case conn
-            when Nil
-            else
-              conn.close
-            end
+      ensure
+        case conn
+        when Nil
+        else
+          conn.close
         end
+      end
     end
-
   end
 end

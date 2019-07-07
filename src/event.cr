@@ -11,11 +11,11 @@ module Crcqrs
 
   class RawEvent < Event
     JSON.mapping(
-        id: String,
-        stream: String,
-        type: String,
-        version: Int64,
-        data: JSON::Any
+      id: String,
+      stream: String,
+      type: String,
+      version: Int64,
+      data: JSON::Any
     )
 
     property data

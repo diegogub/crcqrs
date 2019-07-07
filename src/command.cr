@@ -9,7 +9,7 @@ module Crcqrs
 
     # checks if is in conflict with event
     def conflicts_with(type : String) : Bool
-        false
+      false
     end
 
     def create : Bool
@@ -56,7 +56,7 @@ module Crcqrs
       end
   end
 
-  macro conflicts_with(name,*events)
+  macro conflicts_with(name, *events)
       class {{name}} < Crcqrs::Command
           def conflict_with(type : String) : Bool
               {% begin %}

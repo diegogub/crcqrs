@@ -1,5 +1,4 @@
-
 module Crcqrs
-    abstract class ProcessManager
-    end
+  abstract class ProcessManager
+  end
 end

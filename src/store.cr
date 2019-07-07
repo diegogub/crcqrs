@@ -73,6 +73,6 @@ module Crcqrs
 
     abstract def get_projection(id : String) : ProjectionStatus
 
-    abstract def list_projections() : Array(ProjectionStatus)
+    abstract def list_projections : Array(ProjectionStatus)
   end
 end
