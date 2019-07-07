@@ -1,3 +1,5 @@
+require "./store"
+
 module Crcqrs
   class MemoryStore < Store
     @mutex : Mutex = Mutex.new

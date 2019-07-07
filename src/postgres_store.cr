@@ -1,4 +1,3 @@
-require "./stores/memory"
 require "pg"
 
 module Crcqrs
