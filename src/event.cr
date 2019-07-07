@@ -12,6 +12,7 @@ module Crcqrs
   class RawEvent < Event
     JSON.mapping(
         id: String,
+        stream: String,
         type: String,
         version: Int64,
         data: JSON::Any
@@ -22,6 +23,7 @@ module Crcqrs
 
     @type : String = ""
     @data : JSON::Any = JSON.parse("{}")
+    @stream : String = ""
 
     def initialize
     end

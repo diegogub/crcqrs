@@ -296,14 +296,15 @@ module Crcqrs
           conn = @conn.checkout
           args = [] of DB::Any
           args << from
-          q = "SELECT id,version,type, data FROM events WHERE correlation_version >= $1 ORDER BY correlation_version ASC"
+          q = "SELECT id,stream,version,type,data FROM events WHERE correlation_version >= $1 ORDER BY correlation_version ASC"
           version = -1
           type = ""
           data = JSON.parse("{}")
           conn.query q, args do |rs|
             rs.each do
-              id, version, type, data = rs.read(String,Int32, String, JSON::Any)
+              id, stream,version, type, data = rs.read(String,String,Int32, String, JSON::Any)
               event = RawEvent.new
+              event.stream = stream
               event.id = id
               event.type = type
               event.version = version.to_i64
@@ -387,6 +388,7 @@ module Crcqrs
             args << error
             conn.query("INSERT INTO projections (id, version, error) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, error = EXCLUDED.error", args)
             conn.close
+            @conn.close
         ensure
             case conn
             when Nil
@@ -411,9 +413,16 @@ module Crcqrs
                 end
             end
 
+            conn.close
+            @conn.close
+
             status
         ensure
-            conn.close
+            case conn
+                when Nil
+                else
+                    conn.close
+            end
         end
     end
 

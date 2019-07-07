@@ -1,4 +1,10 @@
 module Crcqrs
+  enum AppError
+      InvalidAggregate
+      AggregateNotFound
+      RebuildFailed
+  end
+
   class App
     property store
 
@@ -32,6 +38,29 @@ module Crcqrs
 
     def build_stream(root : AggregateRoot, agg : Aggregate) : String
       "#{@name}|#{root.name}|#{agg.id}"
+    end
+
+
+    def get_aggregate(aggregate : String, id : String) : (Aggregate | AppError)
+        if !@aggregates.has_key?(aggregate)
+            return AppError::InvalidAggregate
+        end
+
+        agg_root = @aggregates[aggregate]
+        agg = agg_root.new(id)
+
+        begin
+          stream = build_stream(agg_root, agg)
+          if !@store.stream_exist(stream)
+             return AppError::AggregateNotFound
+          end
+
+          agg = rebuild_aggregate(agg_root, stream, agg, true)
+        rescue e
+          return AppError::RebuildFailed
+        end
+
+        agg
     end
 
     # rebuild_aggregate, rebuilds aggregate from past events
@@ -72,32 +101,17 @@ module Crcqrs
       agg
     end
 
-    # f(cmd) -> event
-    # Execute, executes command into system, using debug gets more verbose
-    #  - debug : more verbose execution
-    #  - mock : does not save event into eventstore
-    #  - log  : logs command into eventstore
-    #  - current_version : to check concurrency issues
-    def execute(agg_name : String, agg_id : String, cmd : Command, current_version = -1, debug = false, mock = false) : (Crcqrs::Aggregate | String)
-      begin
-        cmd_validators = @aggregates[agg_name].validators
-
-        agg_root = @aggregates[agg_name]
-        agg = agg_root.new(agg_id)
-
+    def build_agg(agg_root : AggregateRoot,id : String,create : Bool, exist : Bool) : (Aggregate | String)
+        agg = agg_root.new id
         begin
           stream = build_stream(agg_root, agg)
-          if debug
-            puts "[#LOG] saving into:" + stream
-          end
-
-          if cmd.create
+          if create
             if @store.stream_exist(stream)
-              return "Aggregate already exist, failed to execute command: " + cmd.name
+              return "Aggregate already exist, failed to execute command" 
             end
           else
-            if cmd.exist && !@store.stream_exist(stream)
-              return "Aggregate does not exist, failed to execute command: " + cmd.name
+            if exist && !@store.stream_exist(stream)
+                return "Aggregate does not exist, failed to execute command."
             end
           end
 
@@ -106,6 +120,11 @@ module Crcqrs
           return "Failed to rebuild aggregate: " + e.message.as(String)
         end
 
+        agg
+    end
+
+    def validate_command(agg_name : String,cmd : Command, debug : Bool)
+        cmd_validators = @aggregates[agg_name].validators
         if cmd_validators.has_key?(cmd.name)
           cmd_validators[cmd.name].each do |val|
             if debug
@@ -118,6 +137,37 @@ module Crcqrs
               return res
             end
           end
+        end
+    end
+
+    # f(cmd) -> event
+    # Execute, executes command into system, using debug gets more verbose
+    #  - debug : more verbose execution
+    #  - mock : does not save event into eventstore
+    #  - log  : logs command into eventstore
+    #  - current_version : to check concurrency issues
+    def execute(agg_name : String, agg_id : String, cmd : Command, current_version = -1, debug = false, mock = false) : (Crcqrs::Aggregate | String)
+      begin
+        cmd_validators = @aggregates[agg_name].validators
+
+        agg_root = @aggregates[agg_name]
+
+        agg = self.build_agg(agg_root,agg_id,cmd.create,cmd.exist)
+        case agg
+        when String
+            return agg
+        else
+        end
+
+        stream = build_stream(agg_root, agg)
+
+
+        res = self.validate_command(agg_name,cmd, debug)
+        case res
+        when CommandError
+            return res
+        else
+
         end
 
         # handle command
@@ -148,8 +198,6 @@ module Crcqrs
         "Failed to execute command"
       end
     end
-  end
 
-  class Context
   end
 end

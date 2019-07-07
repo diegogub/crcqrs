@@ -12,6 +12,9 @@ module Crcqrs
             error: String,
             version: Int64
         )
+
+        def initialize
+        end
     end
 
     abstract class Projection
@@ -31,6 +34,10 @@ module Crcqrs
             # get current store version
             loop do
                 current = @store.correlative_version()
+                projection = @store.get_projection(@id)
+
+                @version = projection.version + 1
+
                 if @version < current
                     cursor = @store.get_events_correlative(@version)
                     case cursor
@@ -52,7 +59,7 @@ module Crcqrs
                     end
                 end
 
-                sleep 0.001
+                sleep 0.2
             end
         end
 

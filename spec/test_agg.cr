@@ -60,6 +60,7 @@ acc = accounts.new "t4"
 acc = app.rebuild_aggregate(accounts, "banking|account|t4", acc, true)
 puts acc.to_json
 
-
-view = Crcqrs::MemoryProjection.new "testing", pg_store
-view.run
+puts ">>"
+puts app.get_aggregate("account","t4").to_json
+puts ">>"
+puts app.get_aggregate("account","t49").to_json
