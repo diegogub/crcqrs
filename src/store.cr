@@ -1,4 +1,3 @@
-
 module Crcqrs
   enum StoreError
     NotFound
