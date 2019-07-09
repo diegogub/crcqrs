@@ -53,6 +53,8 @@ module Crcqrs
     # replay aggregate from store
     abstract def get_events(agg : AggregateRoot, stream : String, from : Int64) : (StreamCursor | StoreError)
 
+    abstract def get_event(agg : AggregateRoot, stream : String, version : Int64) : (Event | StoreError)
+
     abstract def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
 
     abstract def stream_exist(stream : String) : Bool

@@ -288,6 +288,41 @@ module Crcqrs
       end
     end
 
+    def get_event(agg : AggregateRoot, stream : String, version : Int64) : (Event | StoreError)
+      begin
+        found = false
+        conn = @conn.checkout
+        args = [] of DB::Any
+        args << stream
+        args << version
+
+        conn.query("SELECT id,stream,version,type,data FROM events WHERE stream = $1 AND version = $2", args) do |rs|
+          event = RawEvent.new
+          rs.each do
+            found = true
+            id, stream, version, type, data = rs.read(String, String, Int32, String, JSON::Any)
+            event.stream = stream
+            event.id = id
+            event.type = type
+            event.version = version.to_i64
+            event.data = data
+            agg_event = agg.gen_event(event.type, event.data.to_json)
+            agg_event.version = event.version
+            agg_event.id = event.id
+            return agg_event
+          end
+        end
+        @conn.close
+        return StoreError::EventNotFound
+      ensure
+        case conn
+        when Nil
+        else
+          conn.close
+        end
+      end
+    end
+
     def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       begin
         found = false

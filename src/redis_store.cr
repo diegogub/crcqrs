@@ -61,6 +61,10 @@ module Crcqrs
       end
     end
 
+    def get_event(agg : AggregateRoot, stream : String, version : Int64) : (Event | StoreError)
+      StoreError::EventNotFound
+    end
+
     def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       j = @rconn.hget("es", id)
       begin

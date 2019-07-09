@@ -36,6 +36,10 @@ module Crcqrs
       @aggregates[agg.name] = agg
     end
 
+    def build_stream(root : AggregateRoot, id : String) : String
+      "#{@name}|#{root.name}|#{id}"
+    end
+
     def build_stream(root : AggregateRoot, agg : Aggregate) : String
       "#{@name}|#{root.name}|#{agg.id}"
     end
@@ -136,6 +140,19 @@ module Crcqrs
             return res
           end
         end
+      end
+    end
+
+    def get_event(agg_name : String, id : String, version : Int64) : (Event | StoreError)
+      agg_root = @aggregates[agg_name]
+      stream = build_stream(agg_root, id)
+
+      event = @store.get_event(agg_root, stream, version)
+      case event
+      when Event
+        return event
+      else
+        event
       end
     end
 

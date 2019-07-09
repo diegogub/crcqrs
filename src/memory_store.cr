@@ -24,6 +24,10 @@ module Crcqrs
       end
     end
 
+    def get_event(agg : AggregateRoot, stream : String, version : Int64) : (Event | StoreError)
+      StoreError::EventNotFound
+    end
+
     def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       begin
         @events[@events_by_id[id]]

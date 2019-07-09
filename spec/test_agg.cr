@@ -69,3 +69,21 @@ when Crcqrs::Event
   puts e.type
   puts e.id
 end
+
+e = app.get_event("account", "")
+case e
+when Crcqrs::Event
+  puts e.to_json
+  puts e.version
+  puts e.type
+  puts e.id
+end
+
+e = app.get_event("account", "t4", 10)
+case e
+when Crcqrs::Event
+  puts e.to_json
+  puts e.version
+  puts e.type
+  puts e.id
+end
