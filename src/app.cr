@@ -140,7 +140,7 @@ module Crcqrs
     end
 
     def get_event(id : String) : (Event | StoreError)
-        @store.get_event(id)
+      @store.get_event(id)
     end
 
     # f(cmd) -> event
