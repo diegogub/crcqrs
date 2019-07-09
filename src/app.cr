@@ -191,7 +191,6 @@ module Crcqrs
             when StoreError
               return "Failed to save event into store"
             else
-               
               agg.apply(cmd_result)
 
               agg
