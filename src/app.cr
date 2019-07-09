@@ -182,7 +182,7 @@ module Crcqrs
             when StoreError
               return "Failed to save event into store"
             else
-              cmd_result
+              agg
             end
           end
         else
@@ -190,7 +190,7 @@ module Crcqrs
             puts "[#Error] Failed to execute command " + cmd.name
           end
 
-          return cmd_result
+          return agg
         end
 
         agg
