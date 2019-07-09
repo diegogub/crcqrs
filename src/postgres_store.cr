@@ -288,6 +288,38 @@ module Crcqrs
       end
     end
 
+
+    def get_event(id : String) : (Event | StoreError)
+       begin
+        found = false
+        conn = @conn.checkout
+        args = [] of DB::Any
+        args << id
+
+        conn.query("SELECT id,stream,version,type,data FROM events WHERE id = $1",args) do |rs|
+            event = RawEvent.new
+            rs.each do 
+                found = true
+                id, stream, version, type, data = rs.read(String, String, Int32, String, JSON::Any)
+                event.stream = stream
+                event.id = id
+                event.type = type
+                event.version = version.to_i64
+                event.data = data
+                return event
+            end
+        end
+        @conn.close
+        return StoreError::EventNotFound
+      ensure
+          case conn
+          when Nil
+          else
+              conn.close
+          end
+      end
+    end
+
     def get_events_correlative(from : Int64) : (StreamCursor | StoreError)
       c = StreamCursor.new
       spawn do
@@ -395,10 +427,6 @@ module Crcqrs
           conn.close
         end
       end
-    end
-
-    def get_event(id : String) : (Event | StoreError)
-      found = false
     end
 
     def get_projection(id : String) : ProjectionStatus

@@ -64,3 +64,9 @@ puts ">>"
 puts app.get_aggregate("account", "t4").to_json
 puts ">>"
 puts app.get_aggregate("account", "t49").to_json
+
+e = app.get_event("01DF5K13MEFF8BNA0MT3TVJF1Z")
+case e
+when Crcqrs::Event
+    puts e.to_json
+end

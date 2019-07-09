@@ -52,7 +52,7 @@ module Crcqrs
           multi.hset("es", event.id, store_event.to_json)
           multi.rpush("s:" + stream, event.id)
           multi.rpush("c", event.id)
-          version = multi.llen(stream)
+          version = multi.llen("s:" + stream)
         end
 
         version.value.as(Int64)
