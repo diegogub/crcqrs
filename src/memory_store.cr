@@ -24,7 +24,7 @@ module Crcqrs
       end
     end
 
-    def get_event(id : String) : (Event | StoreError)
+    def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       begin
         @events[@events_by_id[id]]
       rescue

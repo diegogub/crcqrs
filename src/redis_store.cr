@@ -61,7 +61,7 @@ module Crcqrs
       end
     end
 
-    def get_event(id : String) : (Event | StoreError)
+    def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       j = @rconn.hget("es", id)
       begin
         r_event = RedisEvent.from_json(j.as(String))

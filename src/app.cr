@@ -139,8 +139,16 @@ module Crcqrs
       end
     end
 
-    def get_event(id : String) : (Event | StoreError)
-      @store.get_event(id)
+    def get_event(agg_name : String, id : String) : (Event | StoreError)
+      agg_root = @aggregates[agg_name]
+
+      event = @store.get_event(agg_root, id)
+      case event
+      when Event
+        return event
+      else
+        event
+      end
     end
 
     # f(cmd) -> event

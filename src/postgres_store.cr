@@ -288,7 +288,7 @@ module Crcqrs
       end
     end
 
-    def get_event(id : String) : (Event | StoreError)
+    def get_event(agg : AggregateRoot, id : String) : (Event | StoreError)
       begin
         found = false
         conn = @conn.checkout
@@ -305,7 +305,10 @@ module Crcqrs
             event.type = type
             event.version = version.to_i64
             event.data = data
-            return event
+            agg_event = agg.gen_event(event.type, event.data.to_json)
+            agg_event.version = event.version
+            agg_event.id = event.id
+            return agg_event
           end
         end
         @conn.close
