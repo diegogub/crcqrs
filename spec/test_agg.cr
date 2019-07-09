@@ -56,10 +56,6 @@ app.execute("account", "t4", cmd, debug = true)
   # puts t2 - t
 end
 
-acc = accounts.new "t4"
-acc = app.rebuild_aggregate(accounts, "banking|account|t4", acc, true)
-puts acc.to_json
-
 puts ">>"
 puts app.get_aggregate("account", "t4").to_json
 puts ">>"
