@@ -6,6 +6,7 @@ module Crcqrs
     @initialized : Bool = false
     @streams : Hash(String, Array(Int64)) = Hash(String, Array(Int64)).new
     @events : Array(Event) = Array(Event).new
+    @events_by_id : Hash(String, Int64) = Hash(String, Int64).new
     @cache : Hash(String, Crcqrs::CacheValue) = Hash(String, Crcqrs::CacheValue).new
 
     def init
@@ -20,6 +21,14 @@ module Crcqrs
         @cache[stream]
       rescue
         Crcqrs::StoreError::MissCache
+      end
+    end
+
+    def get_event(id : String) : (Event | StoreError)
+      begin
+        @events[@events_by_id[id]]
+      rescue
+        StoreError::EventNotFound
       end
     end
 
@@ -60,6 +69,7 @@ module Crcqrs
         event.version = version + 1
         @events << event
         @streams[stream] << @events.size.to_i64
+        @events_by_id[event.id] = @events.size.to_i64
 
         version
       ensure

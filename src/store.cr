@@ -5,6 +5,7 @@ module Crcqrs
     Lock
     Failed
     MissCache
+    EventNotFound
   end
 
   alias StoreParams = {create: Bool, lock: Int64}
@@ -51,6 +52,8 @@ module Crcqrs
     abstract def version(stream : String) : (Int64 | StoreError)
     # replay aggregate from store
     abstract def get_events(agg : AggregateRoot, stream : String, from : Int64) : (StreamCursor | StoreError)
+
+    abstract def get_event(id : String) : (Event | StoreError)
 
     abstract def stream_exist(stream : String) : Bool
 

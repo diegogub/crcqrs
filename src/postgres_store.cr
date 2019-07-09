@@ -397,6 +397,10 @@ module Crcqrs
       end
     end
 
+    def get_event(id : String) : (Event | StoreError)
+      found = false
+    end
+
     def get_projection(id : String) : ProjectionStatus
       begin
         args = [] of DB::Any

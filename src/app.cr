@@ -139,6 +139,9 @@ module Crcqrs
       end
     end
 
+    def get_event(id : String) : (Event | StoreError)
+    end
+
     # f(cmd) -> event
     # Execute, executes command into system, using debug gets more verbose
     #  - debug : more verbose execution
@@ -186,6 +189,8 @@ module Crcqrs
           if debug
             puts "[#Error] Failed to execute command " + cmd.name
           end
+
+          return cmd_result
         end
 
         agg
